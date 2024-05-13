@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filter-You</title>
+  <!-- Add favicon link -->
+  <link rel="icon" type="image/png" href="Favcon.png">
+  <style>
+    /* Increase the size of the favicon */
+    /* You can adjust the width and height as needed */
+    link[rel="icon"] {
+      width: 94px;
+      height: 94px;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-image: url('BG.jpeg'); /* Replace 'BG.jpeg' with the URL of your image */
+      background-size: cover;
+      background-position: center;
+      position: relative; /* Make the body relative for positioning the logo */
+    }
+    #container {
+      display: flex;
+      align-items: center;
+      text-align: center;
+    }
+    #canvasContainer {
+      margin-right: 20px;
+    }
+    canvas {
+      border: 0.5px solid black;
+      max-width: 100%;
+      max-height: 35vh;
+    }
+    input[type="text"] {
+      width: 80%;
+      margin-bottom: 10px;
+      background-color: transparent;
+      border: none;
+      border-bottom: 1px solid white;
+      color: white;
+      padding: 5px;
+    }
+    #output img {
+      max-width: 100%; /* Limit image width to fit container */
+      max-height: 35vh; /* Limit image height to fit container */
+    }
+    button {
+      background-color: white;
+      color: black;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    /* Logo styles */
+    #logo {
+      position: absolute;
+      bottom: 20px;
+      left: calc(10% - 150px); /* Adjust position to the left */
+      width: 200px; /* Adjust width */
+      height: auto; /* Maintain aspect ratio */
+      opacity: 5; /* Adjust opacity */
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="canvasContainer">
+      <h1>Filter-You Sketch to Image</h1>
+      <canvas id="drawingCanvas" width="400" height="300"></canvas>
+      <br>
+      <label for="prompt">Prompt:</label>
+      <br>
+      <input type="text" id="prompt" placeholder="Enter your prompt">
+      <br>
+      <button onclick="convertSketchToImage()">Generate</button>
+      <button onclick="regenerate()">Regenerate</button>
+    </div>
+    <div id="output"></div>
+  </div>
+  <!-- Logo -->
+  <img id="logo" src="Logo.png" alt="Logo"> <!-- Replace 'your_logo.png' with the URL or path to your logo -->
+  <script>
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getMouseOrTouchPosition(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getMouseOrTouchPosition(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function getMouseOrTouchPosition(evt) {
+      let clientX, clientY;
+      if (evt.touches) {
+        clientX = evt.touches[0].clientX;
+        clientY = evt.touches[0].clientY;
+      } else {
+        clientX = evt.clientX;
+        clientY = evt.clientY;
+      }
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    function convertSketchToImage() {
+      // Display "Generating..." text
+      document.getElementById('output').innerHTML = 'Generating...';
+
+      const form = new FormData();
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1024;
+      tempCanvas.height = 1024;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+      const dataUrl = tempCanvas.toDataURL('image/jpeg');
+      const blobBin = atob(dataUrl.split(',')[1]);
+      const array = [];
+      for (let i = 0; i < blobBin.length; i++) {
+        array.push(blobBin.charCodeAt(i));
+      }
+      const file = new Blob([new Uint8Array(array)], { type: 'image/jpeg' });
+
+      const promptText = document.getElementById('prompt').value;
+      form.append('sketch_file', file, 'drawing.jpg');
+      form.append('prompt', promptText);
+
+      fetch('https://clipdrop-api.co/sketch-to-image/v1/sketch-to-image', {
+        method: 'POST',
+        headers: {
+          'x-api-key': '630ecca62f01cc37fe03f08b1eb9ae45bbcd832e9187c976eb0d5739a532c3449463999d04cf0e9b4c70615ad8f27723',
+        },
+        body: form,
+      })
+        .then(response => response.blob())
+        .then(blob => {
+          // Convert blob to URL
+          const imageUrl = URL.createObjectURL(blob);
+          
+          // Display the image
+          const imageElement = document.createElement('img');
+          imageElement.src = imageUrl;
+          document.getElementById('output').innerHTML = '';
+          document.getElementById('output').appendChild(imageElement);
+        })
+        .catch(error => {
+          console.error('There was a problem with the fetch operation:', error);
+        });
+    }
+
+    function regenerate() {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Clear prompt input
+      document.getElementById('prompt').value = '';
+      // Clear output
+      document.getElementById('output').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
