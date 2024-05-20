@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Filter-You</title>
-  <!-- Add favicon link -->
   <link rel="icon" type="image/png" href="Favcon.png">
   <style>
     /* Increase the size of the favicon */
@@ -20,10 +19,10 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      background-image: url('BG.jpeg'); /* Replace 'BG.jpeg' with the URL of your image */
+      background-image: url('BG.jpeg');
       background-size: cover;
       background-position: center;
-      position: relative; /* Make the body relative for positioning the logo */
+      position: relative;
     }
     #container {
       display: flex;
@@ -48,8 +47,8 @@
       padding: 5px;
     }
     #output img {
-      max-width: 100%; /* Limit image width to fit container */
-      max-height: 35vh; /* Limit image height to fit container */
+      max-width: 100%;
+      max-height: 35vh;
     }
     button {
       background-color: white;
@@ -59,62 +58,59 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* Logo styles */
     #logo {
       position: absolute;
       bottom: 20px;
-      left: calc(10% - 150px); /* Adjust position to the left */
-      width: 200px; /* Adjust width */
-      height: auto; /* Maintain aspect ratio */
-      opacity: 5; /* Adjust opacity */
+      left: calc(10% - 150px);
+      width: 200px;
+      height: auto;
+      opacity: 5;
     }
 
-    /* Add media query for mobile devices */
     @media only screen and (max-width: 600px) {
-      /* Adjust body styles */
       body {
         display: flex;
         justify-content: center;
-        align-items: flex-start; /* Align items to the top */
-        height: auto; /* Allow height to adjust based on content */
-        padding: 20px; /* Add padding for better spacing */
-        background-image: url('BG.jpeg'); /* Apply background image */
+        align-items: flex-start;
+        height: auto;
+        padding: 20px;
+        background-image: url('BG.jpeg');
         background-size: cover;
         background-position: center;
       }
 
       #container {
-        flex-direction: column; /* Stack elements vertically */
-        align-items: center; /* Align items to the center */
-        width: 100%; /* Set container width to full screen */
-        max-width: 600px; /* Limit container width */
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 600px;
       }
 
       #canvasContainer {
-        width: 100%; /* Set canvas container width to full screen */
-        max-width: 600px; /* Limit canvas container width */
-        margin-right: 0; /* Remove right margin */
+        width: 100%;
+        max-width: 600px;
+        margin-right: 0;
       }
 
       canvas {
-        width: 100%; /* Set canvas width to full screen */
-        max-width: 100%; /* Limit canvas width */
-        height: auto; /* Allow canvas height to adjust based on width */
+        width: 100%;
+        max-width: 100%;
+        height: auto;
       }
 
       input[type="text"], button {
-        width: 100%; /* Set input and button width to full screen */
-        max-width: 100%; /* Limit input and button width */
+        width: 100%;
+        max-width: 100%;
       }
 
       #output img {
-        width: 100%; /* Set image width to full screen */
-        max-width: 100%; /* Limit image width */
-        height: auto; /* Allow image height to adjust based on width */
+        width: 100%;
+        max-width: 100%;
+        height: auto;
       }
 
       #logo {
-        display: none; /* Hide the logo on mobile devices */
+        display: none;
       }
     }
   </style>
@@ -134,8 +130,7 @@
     </div>
     <div id="output"></div>
   </div>
-  <!-- Logo -->
-  <img id="logo" src="Logo.png" alt="Logo"> <!-- Replace 'your_logo.png' with the URL or path to your logo -->
+  <img id="logo" src="Logo.png" alt="Logo">
   <script>
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
@@ -146,6 +141,8 @@
       const pos = getMouseOrTouchPosition(e);
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
+      ctx.strokeStyle = 'white'; // Set line color to white
+      ctx.lineWidth = 2; // Set line width as needed
     }
 
     function stopDrawing() {
@@ -184,7 +181,6 @@
     canvas.addEventListener('mouseout', stopDrawing);
 
     function convertSketchToImage() {
-      // Display "Generating..." text
       document.getElementById('output').innerHTML = 'Generating...';
 
       const form = new FormData();
@@ -192,14 +188,28 @@
       tempCanvas.width = 1024;
       tempCanvas.height = 1024;
       const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.fillStyle = 'black'; // Set background color to black
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
       tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-      const dataUrl = tempCanvas.toDataURL('image/jpeg');
+
+      // Enhance sketch: Increase contrast and convert to grayscale
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = brightness;
+        data[i + 1] = brightness;
+        data[i + 2] = brightness;
+      }
+      tempCtx.putImageData(imageData, 0, 0);
+
+      const dataUrl = tempCanvas.toDataURL('image/jpg');
       const blobBin = atob(dataUrl.split(',')[1]);
       const array = [];
       for (let i = 0; i < blobBin.length; i++) {
         array.push(blobBin.charCodeAt(i));
       }
-      const file = new Blob([new Uint8Array(array)], { type: 'image/jpeg' });
+      const file = new Blob([new Uint8Array(array)], { type: 'image/jpg' });
 
       const promptText = document.getElementById('prompt').value;
       form.append('sketch_file', file, 'drawing.jpg');
@@ -214,10 +224,7 @@
       })
         .then(response => response.blob())
         .then(blob => {
-          // Convert blob to URL
           const imageUrl = URL.createObjectURL(blob);
-          
-          // Display the image
           const imageElement = document.createElement('img');
           imageElement.src = imageUrl;
           document.getElementById('output').innerHTML = '';
@@ -229,13 +236,11 @@
     }
 
     function regenerate() {
-      // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Clear prompt input
       document.getElementById('prompt').value = '';
-      // Clear output
       document.getElementById('output').innerHTML = '';
     }
-  </script>
+</script>
+
 </body>
 </html>
